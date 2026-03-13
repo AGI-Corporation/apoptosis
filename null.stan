@@ -6,11 +6,11 @@ data {
   int<lower=1> N_test;                // number of test observations
   int<lower=1> C;                     // number of clones
   int<lower=1> R;                     // number of replicates (i.e. n total cultures)
-  int<lower=1,upper=C> clone[R];      // map of replicate to clone
-  int<lower=1,upper=R> replicate[N];  // map of observation to replicate
+  array[R] int<lower=1,upper=C> clone;       // map of replicate to clone
+  array[N] int<lower=1,upper=R> replicate;   // map of observation to replicate
   vector<lower=0>[N] t;
   vector<lower=0>[N] y;
-  int<lower=1,upper=R> replicate_test[N_test];
+  array[N_test] int<lower=1,upper=R> replicate_test;
   vector<lower=0>[N_test] t_test;
   vector<lower=0>[N_test] y_test;
   vector[2] prior_mu;
@@ -41,13 +41,18 @@ transformed parameters {
   vector[C] log_td = tconst + cd;
   vector[C] log_kd = dconst + ct;
   {
-    vector[N] x_small;
+    // Performance optimizations:
+    // - Pre-calculate clone-level parameters outside the observation loop (lifts C exp() calls out of N iterations).
+    // - Vectorize the calculation of observation-level error variables (x_small and err).
+    vector[C] kq_c = exp(log_kq);
+    vector[C] td_c = exp(log_td);
+    vector[C] kd_c = exp(log_kd);
     for (n in 1:N){
         int r = replicate[n];
         int c = clone[r];
-        yhat[n] = yt(t[n], R0[r], mu, exp(log_kq[c]), exp(log_td[c]), exp(log_kd[c]));
-        x_small[n] = yhat[n] > 0.3 ? 0 : log(yhat[n] / 0.3);
+        yhat[n] = yt(t[n], R0[r], mu, kq_c[c], td_c[c], kd_c[c]);
     }
+    vector[N] x_small = fmin(0.0, log(yhat / 0.3));
     err = exp(mu_err + b_err * x_small);
   }
 }
@@ -76,17 +81,23 @@ model {
 generated quantities {
   vector[R] llik = rep_vector(0, R);
   vector[N_test] yrep;
-  real avg_delay = exp(tconst) + inv(exp(dconst));
-  real tauD = exp(tconst);
-  real k_d = exp(dconst);
-  for (n in 1:N_test){
-    int r = replicate_test[n];
-    int c = clone[r];
-    real yhat_test =
-      yt(t_test[n], R0[r], mu, exp(log_kq[c]), exp(log_td[c]), exp(log_kd[c]));
-    real xs = yhat_test > 0.3 ? 0 : log(yhat_test / 0.3);
-    real err_test = exp(mu_err + b_err * xs);
-    yrep[n] = lognormal_rng(log(yhat_test), err_test);
-    llik[r] += lognormal_lpdf(y_test[n] | log(yhat_test), err_test);
+  real exp_tconst = exp(tconst);
+  real inv_exp_dconst = inv(exp(dconst));
+  real avg_delay = exp_tconst + inv_exp_dconst;
+  real tauD = exp_tconst;
+  real k_d = inv(inv_exp_dconst);
+  {
+    vector[C] kq_c = exp(log_kq);
+    vector[C] td_c = exp(log_td);
+    vector[C] kd_c = exp(log_kd);
+    for (n in 1:N_test){
+      int r = replicate_test[n];
+      int c = clone[r];
+      real yhat_test = yt(t_test[n], R0[r], mu, kq_c[c], td_c[c], kd_c[c]);
+      real xs = yhat_test > 0.3 ? 0 : log(yhat_test / 0.3);
+      real err_test = exp(mu_err + b_err * xs);
+      yrep[n] = lognormal_rng(log(yhat_test), err_test);
+      llik[r] += lognormal_lpdf(y_test[n] | log(yhat_test), err_test);
+    }
   }
 }
