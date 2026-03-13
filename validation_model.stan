@@ -3,7 +3,7 @@ functions {
 }
 data {
   int<lower=1> N;
-  vector[N] t;
+  array[N] real t;
   real R0;
   real sm;
   real kq;
