@@ -14,22 +14,32 @@ real Rt(real t, real R0, real sm){
 }
 
 real Qat(real t, real R0, real sm, real kq, real td){
-  real U = t < td ? 0 : 1;
-  return kq * R0 / sm * (exp(sm * t) - 1)
-    - kq * R0 / sm * (exp(sm * (t - td)) - 1) * U;
+  real common = kq * R0 / sm;
+  if (t < td) {
+    return common * (exp(sm * t) - 1);
+  } else {
+    return common * (exp(sm * t) - exp(sm * (t - td)));
+  }
 }
 
 real Qct(real t, real R0, real sm, real kq, real td, real kd){
-  real U = t < td ? 0 : 1;
-  return U
-    * kq * R0 / (sm + kd)
-    * (exp((sm + kd) * (t - td)) * exp(kd * td) - exp(kd * td))
-    * exp(-kd * t);
+  if (t < td) return 0;
+  return kq * R0 / (sm + kd) * (exp(sm * (t - td)) - exp(-kd * (t - td)));
 }
 
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  real R0_over_sm = R0 / sm;
+  real term1 = mu * R0_over_sm * exp(sm * t);
+  if (t < td) {
+    return term1 - kq * R0_over_sm;
+  } else {
+    real sm_plus_kd = sm + kd;
+    real t_minus_td = t - td;
+    return term1
+           - (kq * kd * R0 / (sm * sm_plus_kd)) * exp(sm * t_minus_td)
+           - (kq * R0 / sm_plus_kd) * exp(-kd * t_minus_td);
+  }
 }
 
 /* 
