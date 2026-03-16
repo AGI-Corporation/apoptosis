@@ -1,0 +1,3 @@
+## 2025-05-14 - [Stan Analytic Solution Optimization]
+**Learning:** Algebraic simplification of analytic ODE solutions can significantly reduce the number of expensive transcendental function calls (like `exp()`) in Stan models. In this case, reducing calls from 6 to 3 per observation. Additionally, lifting parameter transformations out of observation loops into the `transformed parameters` block as vectorized operations avoids redundant calculations and leverages Stan's optimized math library.
+**Action:** Always look for algebraic simplifications in analytic solutions and ensure parameter transformations are hoisted out of observation loops.
