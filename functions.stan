@@ -9,6 +9,28 @@
         // Qa  = kq*Ro/sigmu*(np.exp(sigmu*t)-1) - kq*Ro/sigmu*(np.exp(sigmu*(t-tau))-1) * U
         // Qc  = ( kq*Ro/(sigmu+kd)*(np.exp((sigmu+kd)*(t-tau))*np.exp(kd*tau) - np.exp(kd*tau))*np.exp(-kd*t) ) * U
 
+/**
+ * Total cell density at time t.
+ *
+ * This function provides an analytically simplified solution to the ODE system,
+ * reducing the number of exp() calls from 6 to at most 3.
+ */
+real yt(real t, real R0, real mu, real kq, real td, real kd){
+  real sm = mu - kq;
+  if (t < td) {
+    return R0 * (mu / sm * exp(sm * t) - kq / sm);
+  } else {
+    real mu_over_sm = mu / sm;
+    real kq_over_sm_plus_kd = kq / (sm + kd);
+    real term2_coeff = (kq * kd) / (sm * (sm + kd));
+    real inv_exp_sm_td = exp(-sm * td);
+    real combined_coeff = mu_over_sm - term2_coeff * inv_exp_sm_td;
+    return R0 * (combined_coeff * exp(sm * t) - kq_over_sm_plus_kd * exp(-kd * (t - td)));
+  }
+}
+
+// These are kept for backward compatibility or individual component access if needed,
+// but yt() now uses a more efficient direct calculation.
 real Rt(real t, real R0, real sm){
   return R0 * exp(sm * t);
 }
@@ -25,11 +47,6 @@ real Qct(real t, real R0, real sm, real kq, real td, real kd){
     * kq * R0 / (sm + kd)
     * (exp((sm + kd) * (t - td)) * exp(kd * td) - exp(kd * td))
     * exp(-kd * t);
-}
-
-real yt(real t, real R0, real mu, real kq, real td, real kd){
-  real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
 }
 
 /* 

@@ -47,12 +47,15 @@ transformed parameters {
   vector[C] log_kq = qconst + cq;
   vector[C] log_td = tconst + dt[design] + cd;
   vector[C] log_kd = dconst + dd[design] + ct;
+  vector[C] kq = exp(log_kq);
+  vector[C] td = exp(log_td);
+  vector[C] kd = exp(log_kd);
   {
     vector[N] x_small;
     for (n in 1:N){
         int r = replicate[n];
         int c = clone[r];
-        yhat[n] = yt(t[n], R0[r], mu, exp(log_kq[c]), exp(log_td[c]), exp(log_kd[c]));
+        yhat[n] = yt(t[n], R0[r], mu, kq[c], td[c], kd[c]);
         x_small[n] = yhat[n] > 0.3 ? 0 : log(yhat[n] / 0.3);
     }
     err = exp(mu_err + b_err * x_small);
@@ -91,7 +94,7 @@ generated quantities {
     int r = replicate_test[n];
     int c = clone[r];
     real yhat_test =
-      yt(t_test[n], R0[r], mu, exp(log_kq[c]), exp(log_td[c]), exp(log_kd[c]));
+      yt(t_test[n], R0[r], mu, kq[c], td[c], kd[c]);
     real xs = yhat_test > 0.3 ? 0 : log(yhat_test / 0.3);
     real err_test = exp(mu_err + b_err * xs);
     yrep[n] = lognormal_rng(log(yhat_test), err_test);
