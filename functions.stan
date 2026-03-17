@@ -4,32 +4,28 @@
 
 */
 
-// U = 0 if t < tau else 1
-        // R   = Ro*np.exp(sigmu*t)
-        // Qa  = kq*Ro/sigmu*(np.exp(sigmu*t)-1) - kq*Ro/sigmu*(np.exp(sigmu*(t-tau))-1) * U
-        // Qc  = ( kq*Ro/(sigmu+kd)*(np.exp((sigmu+kd)*(t-tau))*np.exp(kd*tau) - np.exp(kd*tau))*np.exp(-kd*t) ) * U
-
-real Rt(real t, real R0, real sm){
-  return R0 * exp(sm * t);
-}
-
-real Qat(real t, real R0, real sm, real kq, real td){
-  real U = t < td ? 0 : 1;
-  return kq * R0 / sm * (exp(sm * t) - 1)
-    - kq * R0 / sm * (exp(sm * (t - td)) - 1) * U;
-}
-
-real Qct(real t, real R0, real sm, real kq, real td, real kd){
-  real U = t < td ? 0 : 1;
-  return U
-    * kq * R0 / (sm + kd)
-    * (exp((sm + kd) * (t - td)) * exp(kd * td) - exp(kd * td))
-    * exp(-kd * t);
-}
-
+/**
+ * Total cell density at time t.
+ *
+ * This function provides an optimized analytic solution to the ODE system.
+ * By algebraically simplifying the solution, we reduce the number of expensive
+ * exp() calls from 6 to 3 for t >= td, and from 3 to 1 for t < td.
+ */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  if (t < td) {
+    // Before delay td: yt = R0 * exp(sm * t) + kq * R0 / sm * (exp(sm * t) - 1)
+    // Simplified: yt = R0 * (mu * exp(sm * t) - kq) / sm
+    return R0 * (mu * exp(sm * t) - kq) / sm;
+  } else {
+    // After delay td:
+    // yt = R0 * ( (mu/sm) * exp(sm * t)
+    //            - (kq * kd / (sm * (sm + kd))) * exp(sm * (t - td))
+    //            - (kq / (sm + kd)) * exp(-kd * (t - td)) )
+    return R0 * ( (mu / sm) * exp(sm * t)
+                 - (kq * kd / (sm * (sm + kd))) * exp(sm * (t - td))
+                 - (kq / (sm + kd)) * exp(-kd * (t - td)) );
+  }
 }
 
 /* 
@@ -38,6 +34,9 @@ real yt(real t, real R0, real mu, real kq, real td, real kd){
 
 */
 
+real Rt(real t, real R0, real sm){
+  return R0 * exp(sm * t);
+}
 
 vector dsdt(real t, vector y, real R0, real sm, real kq, real td, real kd){
   vector[4] flux = [(sm + kq) * y[1],
