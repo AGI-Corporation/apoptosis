@@ -1,0 +1,3 @@
+## 2025-05-15 - Stan Analytic Solution Optimization
+**Learning:** Algebraic simplification of analytic ODE solutions significantly reduces computational cost per observation. Reducing `exp()` calls from 7 to 1 (for t < td) or 3 (for t >= td) provides a direct performance boost during sampling. Additionally, lifting `exp()` calls for clone-level parameters out of the $O(N)$ observation loop into a $O(C)$ pre-calculation step further reduces redundant computation.
+**Action:** Always check if complex analytic solutions in Stan can be simplified or if expensive operations (like `exp`, `log`, `pow`) can be factored out of loops and pre-calculated at a higher level (clone or design level).
