@@ -13,23 +13,18 @@ real Rt(real t, real R0, real sm){
   return R0 * exp(sm * t);
 }
 
-real Qat(real t, real R0, real sm, real kq, real td){
-  real U = t < td ? 0 : 1;
-  return kq * R0 / sm * (exp(sm * t) - 1)
-    - kq * R0 / sm * (exp(sm * (t - td)) - 1) * U;
-}
-
-real Qct(real t, real R0, real sm, real kq, real td, real kd){
-  real U = t < td ? 0 : 1;
-  return U
-    * kq * R0 / (sm + kd)
-    * (exp((sm + kd) * (t - td)) * exp(kd * td) - exp(kd * td))
-    * exp(-kd * t);
-}
-
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  if (t < td){
+    return (R0 / sm) * (mu * exp(sm * t) - kq);
+  } else {
+    real smkd = sm + kd;
+    real exp_sm_t = exp(sm * t);
+    real exp_sm_tmtd = exp(sm * (t - td));
+    real exp_kd_tmtd = exp(-kd * (t - td));
+    return (R0 / sm) * (mu * exp_sm_t - (kq * kd / smkd) * exp_sm_tmtd)
+           - (kq * R0 / smkd) * exp_kd_tmtd;
+  }
 }
 
 /* 
