@@ -51,13 +51,14 @@ transformed parameters {
     vector[C] kq = exp(log_kq);
     vector[C] td = exp(log_td);
     vector[C] kd = exp(log_kd);
-    vector[N] x_small;
     for (n in 1:N){
         int r = replicate[n];
         int c = clone[r];
         yhat[n] = yt(t[n], R0[r], mu, kq[c], td[c], kd[c]);
-        x_small[n] = yhat[n] > 0.3 ? 0 : log(yhat[n] / 0.3);
     }
+    // Vectorized error calculation:
+    // x_small = min(0, log(yhat / 0.3))
+    vector[N] x_small = fmin(rep_vector(0, N), log(yhat / 0.3));
     err = exp(mu_err + b_err * x_small);
   }
 }

@@ -33,20 +33,17 @@ real Qct(real t, real R0, real sm, real kq, real td, real kd){
  * Total cell density at time t.
  *
  * Optimized to reduce the number of exp() calls and simplify algebraic terms.
- * Reduces exp() calls from ~7 to 1 (for t < td) or 3 (for t >= td).
+ * Reduces exp() calls to 1 (for t < td) or 2 (for t >= td) per observation.
  */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
   if (t < td) {
     return (R0 / sm) * (mu * exp(sm * t) - kq);
   } else {
-    real est = exp(sm * t);
-    real est_td = exp(sm * (t - td));
-    real ekdt_td = exp(-kd * (t - td));
-    // Simplified: Rt + Qat + Qct
-    return (mu * R0 / sm) * est
-           - (kq * kd * R0 / (sm * (sm + kd))) * est_td
-           - (kq * R0 / (sm + kd)) * ekdt_td;
+    real sm_kd = sm + kd;
+    real CA = (R0 / sm) * (mu - (kq * kd / sm_kd) * exp(-sm * td));
+    real CB = (kq * R0 / sm_kd) * exp(kd * td);
+    return CA * exp(sm * t) - CB * exp(-kd * t);
   }
 }
 
