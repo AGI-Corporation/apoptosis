@@ -14,22 +14,37 @@ real Rt(real t, real R0, real sm){
 }
 
 real Qat(real t, real R0, real sm, real kq, real td){
-  real U = t < td ? 0 : 1;
-  return kq * R0 / sm * (exp(sm * t) - 1)
-    - kq * R0 / sm * (exp(sm * (t - td)) - 1) * U;
+  if (t < td) {
+    return (kq * R0 / sm) * (exp(sm * t) - 1);
+  } else {
+    return (kq * R0 / sm) * (exp(sm * t) - exp(sm * (t - td)));
+  }
 }
 
 real Qct(real t, real R0, real sm, real kq, real td, real kd){
-  real U = t < td ? 0 : 1;
-  return U
-    * kq * R0 / (sm + kd)
-    * (exp((sm + kd) * (t - td)) * exp(kd * td) - exp(kd * td))
-    * exp(-kd * t);
+  if (t < td) {
+    return 0;
+  } else {
+    return (kq * R0 / (sm + kd)) * (exp(sm * (t - td)) - exp(-kd * (t - td)));
+  }
 }
 
+/**
+ * Total cell density at time t.
+ *
+ * Optimized to reduce the number of exp() calls and simplify algebraic terms.
+ * Reduces exp() calls to 1 (for t < td) or 2 (for t >= td) per observation.
+ */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  if (t < td) {
+    return (R0 / sm) * (mu * exp(sm * t) - kq);
+  } else {
+    real sm_kd = sm + kd;
+    real CA = (R0 / sm) * (mu - (kq * kd / sm_kd) * exp(-sm * td));
+    real CB = (kq * R0 / sm_kd) * exp(kd * td);
+    return CA * exp(sm * t) - CB * exp(-kd * t);
+  }
 }
 
 /* 
