@@ -1,0 +1,3 @@
+## 2026-03-22 - Stan Model Optimization and Compatibility
+**Learning:** Reusing `transformed parameters` (`yhat`, `err`) in `generated quantities` provides significant performance gains for models where training data is often used as test data (like LOO-CV). However, this must be guarded by a `test_is_train` flag to ensure correctness if a separate test set is provided. Additionally, modern Stan (2.33+) removed the old array syntax (`int x[N]`), requiring a migration to `array[N] int x`.
+**Action:** Use a `test_is_train` flag for safe data reuse in Stan models and always use modern array syntax for forward compatibility.
