@@ -13,23 +13,45 @@ real Rt(real t, real R0, real sm){
   return R0 * exp(sm * t);
 }
 
-real Qat(real t, real R0, real sm, real kq, real td){
-  real U = t < td ? 0 : 1;
-  return kq * R0 / sm * (exp(sm * t) - 1)
-    - kq * R0 / sm * (exp(sm * (t - td)) - 1) * U;
-}
-
-real Qct(real t, real R0, real sm, real kq, real td, real kd){
-  real U = t < td ? 0 : 1;
-  return U
-    * kq * R0 / (sm + kd)
-    * (exp((sm + kd) * (t - td)) * exp(kd * td) - exp(kd * td))
-    * exp(-kd * t);
-}
-
+/**
+ * Total cell density yt at time t.
+ *
+ * This is an algebraically simplified version of the analytic solution:
+ * yt = Rt + Qat + Qct
+ *
+ * Performance optimization:
+ * - Reduces exp() calls from up to 6 to 3 (for t >= td) or 1 (for t < td).
+ * - Adds a 0.00001 floor for numerical stability in log-likelihoods.
+ */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  real out;
+
+  if (t < td) {
+    // For t < td:
+    // Rt = R0 * exp(sm * t)
+    // Qat = kq * R0 / sm * (exp(sm * t) - 1)
+    // Qct = 0
+    // yt = R0 * exp(sm * t) * (1 + kq/sm) - kq * R0 / sm
+    // since 1 + kq/sm = (sm + kq)/sm = mu/sm
+    out = (R0 / sm) * (mu * exp(sm * t) - kq);
+  } else {
+    // For t >= td:
+    // Rt = R0 * exp(sm * t)
+    // Qat = kq * R0 / sm * (exp(sm * t) - exp(sm * (t - td)))
+    // Qct = kq * R0 / (sm + kd) * (exp(sm * (t - td)) - exp(kd * td - kd * t))
+    // yt = R0 * exp(sm * t) + (kq * R0 / sm) * (exp(sm * t) - exp(sm * (t - td)))
+    //      + (kq * R0 / (sm + kd)) * (exp(sm * (t - td)) - exp(-kd * (t - td)))
+
+    real e_smt = exp(sm * t);
+    real e_sm_t_td = exp(sm * (t - td));
+    real e_kd_t_td = exp(-kd * (t - td));
+
+    out = R0 * e_smt + (kq * R0 / sm) * (e_smt - e_sm_t_td)
+          + (kq * R0 / (sm + kd)) * (e_sm_t_td - e_kd_t_td);
+  }
+
+  return out > 0.00001 ? out : 0.00001;
 }
 
 /* 
