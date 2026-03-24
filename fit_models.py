@@ -2,8 +2,8 @@ import os
 
 import arviz as az
 import pandas as pd
-from cmdstanpy import CmdStanModel
-from cmdstanpy.utils import get_logger, jsondump
+from cmdstanpy import CmdStanModel, write_stan_json
+from cmdstanpy.utils import get_logger
 
 from munging import prepare_data
 from util import get_99_pct_params_ln
@@ -68,7 +68,7 @@ STAN_FILES = {
 
 def get_stan_input(msmts, priors, design_col):
     out = {
-        **priors,
+        **{k: list(v) if isinstance(v, (tuple, pd.Series, dict)) else v for k, v in priors.items()},
         **{
             "N": int(len(msmts)),
             "N_test": int(len(msmts)),
@@ -82,6 +82,7 @@ def get_stan_input(msmts, priors, design_col):
             "t_test": msmts["day"].values,
             "y_test": msmts["y"].values,
             "likelihood": int(LIKELIHOOD),
+            "test_is_train": 1,
         },
     }
     if "null" not in design_col:
@@ -136,7 +137,7 @@ def main():
             model = CmdStanModel(stan_file=stan_file, logger=logger)
             msmts = prepare_data(pd.read_csv(CSV_FILE), treatment=treatment)
             stan_input = get_stan_input(msmts, PRIORS, design_col)
-            jsondump(json_file, stan_input)
+            write_stan_json(json_file, stan_input)
             mcmc = model.sample(data=stan_input, **SAMPLE_CONFIG)
             print(mcmc.diagnose().replace("\n\n", "\n"))
             infd_kwargs = get_infd_kwargs(msmts, design_col, stan_input)
