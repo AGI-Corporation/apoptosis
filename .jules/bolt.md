@@ -1,0 +1,7 @@
+## 2026-03-24 - Stan Model Optimization and Modernization
+**Learning:** Algebraic simplification of analytical ODE solutions in Stan can significantly reduce the number of transcendental function calls (like `exp()`), providing a major speedup (e.g., ~40% in this case). Additionally, lifting constant-per-iteration operations out of observation loops in the `transformed parameters` block reduces the workload on the auto-differentiation stack. Reusing results from `transformed parameters` in `generated quantities` via a `test_is_train` flag avoids redundant computations during model evaluation.
+**Action:** Always look for algebraic simplifications in Stan functions and lift exponentiations or other expensive operations out of scalar loops. Use flags to avoid redundant GQ calculations when test data equals training data.
+
+## 2026-03-24 - Modern CmdStan Compatibility
+**Learning:** Stan 2.33.0+ removed old array syntax (e.g., `int x[N]`), requiring modernization to `array[N] int x`. `cmdstanpy` has also deprecated `jsondump` in favor of `write_stan_json`, and stricter dimension checking in modern versions may require explicit casting of Pandas Series to lists when preparing Stan input.
+**Action:** Use `stanc --print-canonical` to upgrade old Stan files and prefer `write_stan_json`. Ensure all Python data passed to Stan is explicitly converted to standard types (lists/nested lists) to avoid dimension mismatch errors.

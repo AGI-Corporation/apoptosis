@@ -57,6 +57,7 @@ class CustomSamplingWrapper(az.SamplingWrapper):
         d_test["replicate_test"] = m_test["replicate_fct"].values
         d_test["N"] = len(m_train)
         d_test["N_test"] = len(m_test)
+        d_test["test_is_train"] = 0
         return d_test, {}
 
 
