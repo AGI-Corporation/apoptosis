@@ -1,0 +1,3 @@
+## 2025-03-25 - Algebraic Simplification and Loop Optimization in Stan
+**Learning:** Collapsing multi-function analytic solutions into a single simplified expression significantly reduces the number of `exp()` calls (from 6 to 3 per observation). Additionally, pre-calculating clone-level exponentiated parameters outside the observation loop and reusing `yhat`/`err` in `generated quantities` when `test_is_train` is true provides major performance gains by avoiding redundant calculations.
+**Action:** Always look for opportunities to simplify analytic solutions and lift constant calculations (at the observation level) into higher-level pre-calculations or vectorized operations. Use a `test_is_train` flag to skip redundant work in the `generated quantities` block.
