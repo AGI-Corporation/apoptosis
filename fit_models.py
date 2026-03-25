@@ -82,6 +82,7 @@ def get_stan_input(msmts, priors, design_col):
             "t_test": msmts["day"].values,
             "y_test": msmts["y"].values,
             "likelihood": int(LIKELIHOOD),
+            "test_is_train": 1,
         },
     }
     if "null" not in design_col:
