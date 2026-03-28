@@ -3,7 +3,7 @@ import os
 import arviz as az
 import pandas as pd
 from cmdstanpy import CmdStanModel
-from cmdstanpy.utils import get_logger, jsondump
+from cmdstanpy.utils import get_logger, write_stan_json
 
 from munging import prepare_data
 from util import get_99_pct_params_ln
@@ -136,7 +136,7 @@ def main():
             model = CmdStanModel(stan_file=stan_file, logger=logger)
             msmts = prepare_data(pd.read_csv(CSV_FILE), treatment=treatment)
             stan_input = get_stan_input(msmts, PRIORS, design_col)
-            jsondump(json_file, stan_input)
+            write_stan_json(json_file, stan_input)
             mcmc = model.sample(data=stan_input, **SAMPLE_CONFIG)
             print(mcmc.diagnose().replace("\n\n", "\n"))
             infd_kwargs = get_infd_kwargs(msmts, design_col, stan_input)
