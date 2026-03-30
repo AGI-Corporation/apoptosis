@@ -13,8 +13,8 @@ data {
 generated quantities {
   vector[N] y_n;
   vector[N] y_a;
-  for (n in 1:N){
-    y_n[n] = yt_num(t[n], R0, sm, kq, td, kd);
-    y_a[n] = yt(t[n], R0, sm, kq, td, kd);
+  for (n in 1 : N) {
+    y_n[n] = yt_num(t[n], R0, sm + kq, kq, td, kd);
+    y_a[n] = yt(t[n], R0, sm + kq, kq, td, kd);
   }
 }
