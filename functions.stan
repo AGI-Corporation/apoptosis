@@ -7,7 +7,7 @@
 // U = 0 if t < tau else 1
         // R   = Ro*np.exp(sigmu*t)
         // Qa  = kq*Ro/sigmu*(np.exp(sigmu*t)-1) - kq*Ro/sigmu*(np.exp(sigmu*(t-tau))-1) * U
-        // Qc  = ( kq*Ro/(sigmu+kd)*(np.exp((sigmu+kd)*(t-tau))*np.exp(kd*tau) - np.exp(kd*tau))*np.exp(-kd*t) ) * U
+        // Qc  = ( kq*Ro/(sm+kd)*(np.exp((sm+kd)*(t-tau))*np.exp(kd*tau) - np.exp(kd*tau))*np.exp(-kd*t) ) * U
 
 real Rt(real t, real R0, real sm){
   return R0 * exp(sm * t);
@@ -29,7 +29,24 @@ real Qct(real t, real R0, real sm, real kq, real td, real kd){
 
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  if (t < td) {
+    // For t < td:
+    // yt = Rt + Qat
+    // Rt = R0 * exp(sm * t)
+    // Qat = (kq * R0 / sm) * (exp(sm * t) - 1)
+    // yt = R0 * (exp(sm * t) * (1 + kq/sm) - kq/sm)
+    // Since 1 + kq/sm = (sm + kq)/sm = mu / sm
+    return fmax(1e-9, R0 * (exp(sm * t) * mu / sm - kq / sm));
+  } else {
+    // For t >= td:
+    // Rt = R0 * exp(sm * t)
+    // Qat = (kq * R0 / sm) * (exp(sm * t) - exp(sm * (t - td)))
+    // Qct = (kq * R0 / (sm + kd)) * (exp(sm * (t - td)) - exp(-kd * (t - td)))
+    real exp_sm_t = exp(sm * t);
+    real exp_sm_t_td = exp(sm * (t - td));
+    real exp_kd_t_td = exp(-kd * (t - td));
+    return fmax(1e-9, R0 * (exp_sm_t * (1 + kq / sm) + exp_sm_t_td * (kq / (sm + kd) - kq / sm) - exp_kd_t_td * (kq / (sm + kd))));
+  }
 }
 
 /* 
