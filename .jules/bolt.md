@@ -1,0 +1,3 @@
+## 2026-04-03 - [Stan Loop Hoisting & Vectorization]
+**Learning:** Hoisting `exp()` calls for clone-level parameters out of observation loops and vectorizing error calculations in Stan significantly reduces the pressure on the auto-differentiation (AD) stack. Furthermore, simplifying modular analytical solutions into a single optimized function reduces overhead and allows for more efficient constant folding by the compiler.
+**Action:** Always check for redundant `exp()` or `log()` calls inside Stan loops, especially when the parameters are constant for a group of observations (e.g., clone-level effects). Vectorize calculations like error bounds using `fmin` or `fmax` to eliminate conditional branching.
