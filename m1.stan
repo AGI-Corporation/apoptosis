@@ -2,17 +2,17 @@ functions {
 #include functions.stan
 }
 data {
-  int<lower=1> N;                     // number of training observations
-  int<lower=1> N_test;                // number of test observations
-  int<lower=1> D;                     // number of designs
-  int<lower=1> C;                     // number of clones
-  int<lower=1> R;                     // number of replicates (i.e. n total cultures)
-  int<lower=1,upper=D> design[C];      // map of clone to design
-  int<lower=1,upper=C> clone[R];      // map of replicate to clone
-  int<lower=1,upper=R> replicate[N];  // map of observation to replicate
+  int<lower=1> N; // number of training observations
+  int<lower=1> N_test; // number of test observations
+  int<lower=1> D; // number of designs
+  int<lower=1> C; // number of clones
+  int<lower=1> R; // number of replicates (i.e. n total cultures)
+  array[C] int<lower=1, upper=D> design; // map of clone to design
+  array[R] int<lower=1, upper=C> clone; // map of replicate to clone
+  array[N] int<lower=1, upper=R> replicate; // map of observation to replicate
   vector<lower=0>[N] t;
   vector<lower=0>[N] y;
-  int<lower=1,upper=R> replicate_test[N_test];
+  array[N_test] int<lower=1, upper=R> replicate_test;
   vector<lower=0>[N_test] t_test;
   vector<lower=0>[N_test] y_test;
   vector[2] prior_mu;
@@ -21,7 +21,7 @@ data {
   vector[2] prior_kd;
   vector[2] prior_R0;
   vector[2] prior_err;
-  int<lower=0,upper=1> likelihood;
+  int<lower=0, upper=1> likelihood;
 }
 parameters {
   real mu_err;
@@ -30,11 +30,11 @@ parameters {
   real qconst;
   real dconst;
   real tconst;
-  real<lower=0,upper=exp(qconst)> mu;
+  real<lower=0, upper=exp(qconst)> mu;
   // design effects
-  vector[D-1] dq_free;
-  vector[D-1] dt_free;
-  vector[D-1] dd_free;
+  vector[D - 1] dq_free;
+  vector[D - 1] dt_free;
+  vector[D - 1] dd_free;
   // clone effects
   vector[C] cq;
   vector[C] cd;
@@ -49,16 +49,19 @@ transformed parameters {
   vector[C] log_kq = qconst + dq[design] + cq;
   vector[C] log_td = tconst + dt[design] + cd;
   vector[C] log_kd = dconst + dd[design] + ct;
-  {
-    vector[N] x_small;
-    for (n in 1:N){
-        int r = replicate[n];
-        int c = clone[r];
-        yhat[n] = yt(t[n], R0[r], mu, exp(log_kq[c]), exp(log_td[c]), exp(log_kd[c]));
-        x_small[n] = yhat[n] > 0.3 ? 0 : log(yhat[n] / 0.3);
-    }
-    err = exp(mu_err + b_err * x_small);
+
+  // Optimization: Pre-calculate clone-level exponentiated parameters
+  vector[C] kq_vec = exp(log_kq);
+  vector[C] td_vec = exp(log_td);
+  vector[C] kd_vec = exp(log_kd);
+
+  for (n in 1 : N) {
+    int r = replicate[n];
+    int c = clone[r];
+    yhat[n] = yt(t[n], R0[r], mu, kq_vec[c], td_vec[c], kd_vec[c]);
   }
+  // Optimization: Vectorized err calculation
+  err = exp(mu_err + b_err * fmin(0, log(yhat / 0.3)));
 }
 model {
   // direct priors
@@ -79,7 +82,7 @@ model {
   cd ~ normal(0, 0.1);
   ct ~ normal(0, 0.1);
   // likelihood
-  if (likelihood){
+  if (likelihood) {
     rep_vector(2.5, R) ~ lognormal(log(R0), exp(mu_err));
     y ~ lognormal(log(yhat), err);
   }
@@ -90,11 +93,12 @@ generated quantities {
   vector[D] avg_delay = exp(tconst + dt) + inv(exp(dconst + dd));
   vector[D] tauD = exp(tconst + dt);
   vector[D] k_d = exp(dconst + dd);
-  for (n in 1:N_test){
+
+  for (n in 1 : N_test) {
     int r = replicate_test[n];
     int c = clone[r];
-    real yhat_test =
-      yt(t_test[n], R0[r], mu, exp(log_kq[c]), exp(log_td[c]), exp(log_kd[c]));
+    real yhat_test = yt(t_test[n], R0[r], mu, kq_vec[c], td_vec[c],
+                        kd_vec[c]);
     real xs = yhat_test > 0.3 ? 0 : log(yhat_test / 0.3);
     real err_test = exp(mu_err + b_err * xs);
     yrep[n] = lognormal_rng(log(yhat_test), err_test);
