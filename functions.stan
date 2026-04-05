@@ -27,9 +27,48 @@ real Qct(real t, real R0, real sm, real kq, real td, real kd){
     * exp(-kd * t);
 }
 
+/**
+ * Total cell density at time t, analytically solved.
+ *
+ * Optimization:
+ * 1. Algebraic simplification to minimize expensive exp() calls.
+ * 2. Implements a floor of 1e-9 to ensure numerical stability for log-likelihood.
+ */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  real val;
+
+  if (t < td) {
+    // simplified Rt + Qat (Qct is 0)
+    // R0 * exp(sm*t) + kq*R0/sm * (exp(sm*t) - 1)
+    // = R0 * (exp(sm*t) + kq/sm*exp(sm*t) - kq/sm)
+    // = R0 * (exp(sm*t) * (1 + kq/sm) - kq/sm)
+    // 1 + kq/sm = (sm + kq)/sm = mu/sm
+    val = R0 * (mu / sm * exp(sm * t) - kq / sm);
+  } else {
+    real exp_sm_t = exp(sm * t);
+    real exp_sm_t_minus_td = exp(sm * (t - td));
+    real exp_neg_kd_t_minus_td = exp(-kd * (t - td));
+
+    // Rt + Qat (for t >= td)
+    // R0 * exp(sm*t) + kq*R0/sm * (exp(sm*t) - 1) - kq*R0/sm * (exp(sm*(t-td)) - 1)
+    // = R0 * exp(sm*t) + kq*R0/sm * (exp(sm*t) - exp(sm*(t-td)))
+    // = R0 * (exp(sm*t) * (1 + kq/sm) - kq/sm * exp(sm*(t-td)))
+    // = R0 * (mu/sm * exp(sm*t) - kq/sm * exp(sm*(t-td)))
+
+    // Qct (for t >= td)
+    // kq * R0 / (sm + kd) * (exp((sm + kd) * (t - td)) * exp(kd * td) - exp(kd * td)) * exp(-kd * t)
+    // = kq * R0 / (sm + kd) * (exp(sm*(t-td) + kd*(t-td) + kd*td) - exp(kd*td)) * exp(-kd*t)
+    // = kq * R0 / (sm + kd) * (exp(sm*(t-td) + kd*t) - exp(kd*td)) * exp(-kd*t)
+    // = kq * R0 / (sm + kd) * (exp(sm*(t-td)) - exp(kd*td - kd*t))
+    // = kq * R0 / (sm + kd) * (exp(sm*(t-td)) - exp(-kd*(t-td)))
+
+    val = R0 * (mu / sm * exp_sm_t
+                - kq / sm * exp_sm_t_minus_td
+                + kq / (sm + kd) * (exp_sm_t_minus_td - exp_neg_kd_t_minus_td));
+  }
+
+  return fmax(1e-9, val);
 }
 
 /* 
