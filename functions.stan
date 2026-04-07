@@ -9,27 +9,19 @@
         // Qa  = kq*Ro/sigmu*(np.exp(sigmu*t)-1) - kq*Ro/sigmu*(np.exp(sigmu*(t-tau))-1) * U
         // Qc  = ( kq*Ro/(sigmu+kd)*(np.exp((sigmu+kd)*(t-tau))*np.exp(kd*tau) - np.exp(kd*tau))*np.exp(-kd*t) ) * U
 
-real Rt(real t, real R0, real sm){
-  return R0 * exp(sm * t);
-}
-
-real Qat(real t, real R0, real sm, real kq, real td){
-  real U = t < td ? 0 : 1;
-  return kq * R0 / sm * (exp(sm * t) - 1)
-    - kq * R0 / sm * (exp(sm * (t - td)) - 1) * U;
-}
-
-real Qct(real t, real R0, real sm, real kq, real td, real kd){
-  real U = t < td ? 0 : 1;
-  return U
-    * kq * R0 / (sm + kd)
-    * (exp((sm + kd) * (t - td)) * exp(kd * td) - exp(kd * td))
-    * exp(-kd * t);
-}
-
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  real R = R0 * exp(sm * t);
+  real Qa_1 = kq * R0 / sm * (exp(sm * t) - 1);
+
+  if (t < td) {
+    return fmax(1e-9, R + Qa_1);
+  } else {
+    real exp_sm_t_td = exp(sm * (t - td));
+    real Qa = Qa_1 - kq * R0 / sm * (exp_sm_t_td - 1);
+    real Qc = kq * R0 / (sm + kd) * (exp_sm_t_td - exp(-kd * t) * exp(kd * td));
+    return fmax(1e-9, R + Qa + Qc);
+  }
 }
 
 /* 
@@ -42,7 +34,7 @@ real yt(real t, real R0, real mu, real kq, real td, real kd){
 vector dsdt(real t, vector y, real R0, real sm, real kq, real td, real kd){
   vector[4] flux = [(sm + kq) * y[1],
                     kq * y[1],
-                    t < td ? 0 : kq * Rt(t - td, R0, sm),
+                    t < td ? 0 : kq * R0 * exp(sm * (t - td)),
                     kd * y[3]]';
   return [flux[1]-flux[2], flux[2]-flux[3], flux[3]-flux[4]]';
 }
