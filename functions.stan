@@ -27,9 +27,29 @@ real Qct(real t, real R0, real sm, real kq, real td, real kd){
     * exp(-kd * t);
 }
 
+/**
+ * Analytic solution for total cell density yt.
+ * Optimized to minimize exp() calls and simplified algebraically.
+ */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  // Use a small epsilon for sm near zero to avoid division by zero
+  // although in practice mu < kq usually.
+  real sm_eff = (abs(sm) < 1e-9) ? (sm > 0 ? 1e-9 : -1e-9) : sm;
+
+  real term1 = (mu * R0 / sm_eff) * exp(sm_eff * t);
+  real res;
+
+  if (t < td) {
+    res = term1 - (kq * R0 / sm_eff);
+  } else {
+    real smkd = sm_eff + kd;
+    real smkd_eff = (abs(smkd) < 1e-9) ? (smkd > 0 ? 1e-9 : -1e-9) : smkd;
+    real common = kq * R0 / smkd_eff;
+    res = term1 - (kd / sm_eff) * common * exp(sm_eff * (t - td)) - common * exp(kd * (td - t));
+  }
+  // Ensure numerical stability and positivity for log-likelihood
+  return res > 1e-9 ? res : 1e-9;
 }
 
 /* 
