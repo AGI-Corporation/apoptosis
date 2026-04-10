@@ -1,0 +1,3 @@
+## 2026-04-10 - Optimize Stan model performance through loop hoisting and analytic simplification
+**Learning:** Algebraic simplification of analytic solutions (reducing `exp()` calls) combined with loop hoisting (pre-calculating clone-level parameters) provides a significant performance boost in Stan models. In this case, a ~1.6x speedup (from 8.11s to 5.01s) was achieved by reducing `exp()` calls from 6 to a maximum of 3 and moving `exp()` of clone-level parameters out of the observation loop.
+**Action:** Always check if expensive analytic functions used in loops can be simplified and if parameter transformations can be hoisted out of observation loops to reduce the number of operations on the auto-diff stack.

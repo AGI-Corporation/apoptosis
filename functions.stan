@@ -5,9 +5,9 @@
 */
 
 // U = 0 if t < tau else 1
-        // R   = Ro*np.exp(sigmu*t)
-        // Qa  = kq*Ro/sigmu*(np.exp(sigmu*t)-1) - kq*Ro/sigmu*(np.exp(sigmu*(t-tau))-1) * U
-        // Qc  = ( kq*Ro/(sigmu+kd)*(np.exp((sigmu+kd)*(t-tau))*np.exp(kd*tau) - np.exp(kd*tau))*np.exp(-kd*t) ) * U
+// R   = Ro*np.exp(sigmu*t)
+// Qa  = kq*Ro/sigmu*(np.exp(sigmu*t)-1) - kq*Ro/sigmu*(np.exp(sigmu*(t-tau))-1) * U
+// Qc  = ( kq*Ro/(sigmu+kd)*(np.exp((sigmu+kd)*(t-tau))*np.exp(kd*tau) - np.exp(kd*tau))*np.exp(-kd*t) ) * U
 
 real Rt(real t, real R0, real sm){
   return R0 * exp(sm * t);
@@ -27,9 +27,21 @@ real Qct(real t, real R0, real sm, real kq, real td, real kd){
     * exp(-kd * t);
 }
 
+/**
+ * Algebraically simplified analytic solution for total cell density.
+ * Reduces exp() calls from 6 to 1 (for t < td) or 3 (for t >= td).
+ */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  real res;
+  if (t < td) {
+    res = R0 * (mu / sm * exp(sm * t) - kq / sm);
+  } else {
+    res = R0 * (mu / sm * exp(sm * t)
+                - (kq * kd) / (sm * (sm + kd)) * exp(sm * (t - td))
+                - kq / (sm + kd) * exp(-kd * (t - td)));
+  }
+  return res > 1e-9 ? res : 1e-9;
 }
 
 /* 
