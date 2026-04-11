@@ -14,6 +14,7 @@ SAMPLE_CONFIG = dict(
     fixed_param=True,
     iter_sampling=1,
     iter_warmup=0,
+    adapt_engaged=False,
 )
 
 def main():
