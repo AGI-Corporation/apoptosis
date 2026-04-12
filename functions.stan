@@ -27,9 +27,24 @@ real Qct(real t, real R0, real sm, real kq, real td, real kd){
     * exp(-kd * t);
 }
 
+/**
+ * Optimized analytic solution for total cell density yt.
+ * Reduces the number of exp() calls and improves numerical stability.
+ */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  real val;
+  if (t < td) {
+    // Simplified: R0 * exp(sm * t) + (kq * R0 / sm) * (exp(sm * t) - 1)
+    val = (R0 / sm) * (mu * exp(sm * t) - kq);
+  } else {
+    // Simplified: R_t + Q_at + Q_ct for t >= td
+    real sm_kd = sm + kd;
+    val = R0 * ( (mu / sm) * exp(sm * t)
+                 - (kq * kd / (sm * sm_kd)) * exp(sm * (t - td))
+                 - (kq / sm_kd) * exp(-kd * (t - td)) );
+  }
+  return fmax(1e-9, val);
 }
 
 /* 
