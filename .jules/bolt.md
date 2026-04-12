@@ -1,0 +1,3 @@
+## 2026-04-12 - Stan Model Optimization via Loop Hoisting and Analytic Simplification
+**Learning:** In hierarchical Stan models, exponentiating clone-level parameters (e.g., `exp(log_kq[c])`) inside an observation loop of size $N$ is a major bottleneck. Pre-calculating these in a vector of size $C$ and indexing it in the loop significantly reduces the number of expensive `exp()` calls and autodiff overhead. Additionally, simplifying complex analytic solutions to minimize the total count of transcendental functions provides a compound performance boost.
+**Action:** Always hoist clone-level parameter transformations out of observation loops in `transformed parameters`. Strive for minimal analytic forms of ODE solutions in Stan functions.
