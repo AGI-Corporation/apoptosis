@@ -1,0 +1,3 @@
+## 2026-04-14 - Redundant transcendental calls in analytic ODE solutions
+**Learning:** In Stan models where observations are grouped by clone/design, recalculating exponentiated parameters (e.g., `exp(log_kq)`) inside the observation loop is extremely expensive. Additionally, the analytic solution for the ODE system contained redundant `exp()` calls that could be simplified algebraically.
+**Action:** Always hoist clone-level parameter transformations out of observation loops. Simplify complex analytic expressions to minimize the number of transcendental function calls. Use `expm1()` for numerical stability in growth models.
