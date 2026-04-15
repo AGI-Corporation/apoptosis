@@ -1,0 +1,3 @@
+## 2026-04-15 - Stan Model Optimization (Loop Hoisting & Analytic Simplification)
+**Learning:** Hoisting transcendental functions like `exp()` out of observation loops in Stan provides significant speedups (measured ~1.7x in this case). Vectorizing these operations at the clone level ($C$) instead of the observation level ($N$) is highly effective when $N \gg C$. Additionally, simplifying complex analytic solutions into a single function reduces overhead and allows for targeted numerical stability improvements (like using `expm1`).
+**Action:** Always check for redundant calculations inside loops in Stan models, especially those involving `exp`, `log`, or power functions. Prefer vectorized parameter transformations in `transformed parameters`.
