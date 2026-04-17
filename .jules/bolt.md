@@ -1,0 +1,3 @@
+## 2025-05-15 - Optimizing Stan Models via Loop Invariant Hoisting and Analytic Simplification
+**Learning:** In Bayesian models using Stan, expensive operations like `exp()` inside observation loops ( \gg 1$) create significant overhead, especially for the Automatic Differentiation (AD) stack. Hoisting parameters that vary only by clone ( \ll N$) into a vector significantly reduces the number of operations. Additionally, algebraic simplification of ODE solutions can reduce the number of `exp()` calls per likelihood evaluation.
+**Action:** Always check `transformed parameters` and `generated quantities` for invariant `exp()`, `log()`, or `pow()` calls that can be hoisted. Simplify analytic expressions to minimize transcendental function evaluations.
