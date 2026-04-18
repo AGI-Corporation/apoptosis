@@ -7,12 +7,12 @@ data {
   int<lower=1> D;                     // number of designs
   int<lower=1> C;                     // number of clones
   int<lower=1> R;                     // number of replicates (i.e. n total cultures)
-  int<lower=1,upper=D> design[C];      // map of clone to design
-  int<lower=1,upper=C> clone[R];      // map of replicate to clone
-  int<lower=1,upper=R> replicate[N];  // map of observation to replicate
+  array[C] int<lower=1,upper=D> design;      // map of clone to design
+  array[R] int<lower=1,upper=C> clone;      // map of replicate to clone
+  array[N] int<lower=1,upper=R> replicate;  // map of observation to replicate
   vector<lower=0>[N] t;
   vector<lower=0>[N] y;
-  int<lower=1,upper=R> replicate_test[N_test];
+  array[N_test] int<lower=1,upper=R> replicate_test;
   vector<lower=0>[N_test] t_test;
   vector<lower=0>[N_test] y_test;
   vector[2] prior_mu;

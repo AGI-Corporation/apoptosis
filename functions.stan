@@ -27,9 +27,28 @@ real Qct(real t, real R0, real sm, real kq, real td, real kd){
     * exp(-kd * t);
 }
 
+/**
+ * Analytically solves the ODE system for total cell density.
+ * Optimized to minimize exp() calls and improve numerical stability.
+ */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  real val;
+  if (t < td) {
+    // Simplified: R0 * exp(sm*t) + (kq*R0/sm) * (exp(sm*t) - 1)
+    // = R0 * (exp(sm*t) * (1 + kq/sm) - kq/sm)
+    // = R0 * (exp(sm*t) * (mu/sm) - kq/sm)
+    // = R0 * (1 + (mu/sm) * expm1(sm*t))
+    val = R0 * (1 + (mu / sm) * expm1(sm * t));
+  } else {
+    // Simplified combined analytic solution for t >= td:
+    // val = R0 * [ (mu/sm)*exp(sm*t) - (kq*kd/(sm*(sm+kd)))*exp(sm*(t-td)) - (kq/(sm+kd))*exp(-kd*(t-td)) ]
+    real t_minus_td = t - td;
+    val = R0 * ( (mu / sm) * exp(sm * t)
+                 - (kq * kd / (sm * (sm + kd))) * exp(sm * t_minus_td)
+                 - (kq / (sm + kd)) * exp(-kd * t_minus_td) );
+  }
+  return val > 1e-9 ? val : 1e-9;
 }
 
 /* 
