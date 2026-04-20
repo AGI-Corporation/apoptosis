@@ -14,13 +14,18 @@ SAMPLE_CONFIG = dict(
     fixed_param=True,
     iter_sampling=1,
     iter_warmup=0,
+    adapt_engaged=False,
 )
 
 def main():
    model = CmdStanModel(stan_file=STAN_FILE)
    mcmc = model.sample(DATA, **SAMPLE_CONFIG)
    print("input data:\n", DATA)
-   print("results:\n", mcmc.draws_pd().T)
+   df = mcmc.draws_pd()
+   y_n = [col for col in df.columns if col.startswith('y_n')]
+   y_a = [col for col in df.columns if col.startswith('y_a')]
+   print("Numerical:\n", df[y_n].values)
+   print("Analytic:\n", df[y_a].values)
 
 
 if __name__ == "__main__":
