@@ -47,7 +47,7 @@ def plot_design_qs(infd):
             ax.set_yticklabels(list(dqs.index))
     for ax in axes:
         ax.axvline(0, color="red")
-    f.suptitle(f"2.5%-97.5% posterior intervals for design effects")
+    f.suptitle("2.5%-97.5% posterior intervals for design effects")
     plt.tight_layout()
     return f, axes
 
