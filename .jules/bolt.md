@@ -1,0 +1,3 @@
+## 2026-04-22 - Stan model optimization with modern array syntax
+**Learning:** Hoisting expensive operations like `exp()` and redundant indexing out of observation loops in Stan significantly improves performance. However, when using modern CmdStan (2.33+), older array syntax (e.g., `int var[N];`) causes compilation errors and must be migrated to `array[N] int var;`. Additionally, `stanc --print-canonical` expands `#include` directives, which may not be desired if maintaining modularity is a priority.
+**Action:** Lift clone-level parameter calculations to `transformed parameters` and use modern array syntax for all declarations. Be cautious with `stanc --print-canonical` and manually restore `#include` if necessary.
