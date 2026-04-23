@@ -6,8 +6,14 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.cm import tab20 as cm
 
-from fit_models import (CSV_FILE, INFD_DIR, LOO_DIR, MODEL_SETS,
-                        TREATMENT_TO_MODEL_SET, TREATMENTS)
+from fit_models import (
+    CSV_FILE,
+    INFD_DIR,
+    LOO_DIR,
+    MODEL_SETS,
+    TREATMENT_TO_MODEL_SET,
+    TREATMENTS,
+)
 from munging import prepare_data
 
 MPL_STYLE = "sparse.mplstyle"
@@ -47,7 +53,7 @@ def plot_design_qs(infd):
             ax.set_yticklabels(list(dqs.index))
     for ax in axes:
         ax.axvline(0, color="red")
-    f.suptitle(f"2.5%-97.5% posterior intervals for design effects")
+    f.suptitle("2.5%-97.5% posterior intervals for design effects")
     plt.tight_layout()
     return f, axes
 
@@ -139,7 +145,9 @@ def main():
         .join(clone_to_design, on="clone")
         .reset_index()
         .melt(id_vars=["clone", "design", "quantile"], value_vars=["cq", "cd", "ct"])
-        .pivot(columns="quantile", index=["clone", "design", "variable"], values="value")
+        .pivot(
+            columns="quantile", index=["clone", "design", "variable"], values="value"
+        )
         .reset_index()
     )
     eff_to_title = {"cd": "$k_d$", "ct": "$\\tau$", "cq": "$k_q$"}
@@ -218,8 +226,8 @@ def main():
                 )
                 plt.savefig(
                     os.path.join(PLOT_DIR, f"sampled_params_posterior_{run_name}.svg"),
-                    bbox_inches="tight"
-                    )
+                    bbox_inches="tight",
+                )
             plt.close("all")
 
 
