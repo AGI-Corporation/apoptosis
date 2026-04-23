@@ -5,9 +5,19 @@ import arviz as az
 import pandas as pd
 from cmdstanpy import CmdStanModel
 
-from fit_models import (CSV_FILE, INFD_DIR, LOO_DIR, MODEL_SETS, OUTPUT_DIR,
-                        PRIORS, STAN_FILES, TREATMENT_TO_MODEL_SET, TREATMENTS,
-                        get_infd_kwargs, get_stan_input)
+from fit_models import (
+    CSV_FILE,
+    INFD_DIR,
+    LOO_DIR,
+    MODEL_SETS,
+    OUTPUT_DIR,
+    PRIORS,
+    STAN_FILES,
+    TREATMENT_TO_MODEL_SET,
+    TREATMENTS,
+    get_infd_kwargs,
+    get_stan_input,
+)
 from loo_compare import compare
 from munging import prepare_data
 
