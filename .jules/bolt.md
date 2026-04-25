@@ -1,0 +1,3 @@
+## 2026-04-25 - Stan Model Optimization via Loop Hoisting and Algebraic Simplification
+**Learning:** In Bayesian models with many observations per group (clones/replicates), recalculating exponentiated parameters (e.g., `exp(log_kq[c])`) inside the observation loop is a significant bottleneck. Additionally, complex analytic ODE solutions can often be algebraically simplified to reduce the number of transcendental function calls.
+**Action:** Always hoist exponentiations of group-level parameters into `transformed parameters` vectors. Use `expm1()` for better numerical stability in analytic solutions where applicable.
