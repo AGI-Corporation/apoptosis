@@ -27,9 +27,24 @@ real Qct(real t, real R0, real sm, real kq, real td, real kd){
     * exp(-kd * t);
 }
 
+/**
+ * Total cell density at time t.
+ * Algebraically simplified to minimize transcendental function calls.
+ *
+ * t < td:  yt = R0/sm * (mu * exp(sm*t) - kq)
+ * t >= td: yt = R0/sm * mu*exp(sm*t) - (kq*kd*R0)/(sm*(sm+kd)) * exp(sm*(t-td)) - (kq*R0)/(sm+kd) * exp(-kd*(t-td))
+ */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  real res;
+  if (t < td) {
+    res = R0 / sm * (mu * expm1(sm * t) + sm);
+  } else {
+    res = R0 * (mu / sm * exp(sm * t)
+                 - (kq * kd) / (sm * (sm + kd)) * exp(sm * (t - td))
+                 - kq / (sm + kd) * exp(-kd * (t - td)));
+  }
+  return res > 1e-9 ? res : 1e-9;
 }
 
 /* 
