@@ -24,7 +24,6 @@ def plot_design_qs(infd):
         .reset_index()
         .rename(columns={"level_1": "quantile", "level_2": "parameter", 0: "value"})
     )
-    n_param = q_table["parameter"].nunique()
     n_design = q_table["design"].nunique()
     design_order = (
         q_table.sort_values("value")
@@ -41,13 +40,13 @@ def plot_design_qs(infd):
         if isinstance(dqs, pd.Series):
             dqs = pd.DataFrame(dqs).transpose()
         ax.set_title(p)
-        lines = ax.hlines(y, dqs[0.025], dqs[0.975], color="black")
+        ax.hlines(y, dqs[0.025], dqs[0.975], color="black")
         ax.set_yticks(y)
         if ax == axes[0]:
             ax.set_yticklabels(list(dqs.index))
     for ax in axes:
         ax.axvline(0, color="red")
-    f.suptitle(f"2.5%-97.5% posterior intervals for design effects")
+    f.suptitle("2.5%-97.5% posterior intervals for design effects")
     plt.tight_layout()
     return f, axes
 
