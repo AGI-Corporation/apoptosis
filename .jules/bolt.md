@@ -1,0 +1,3 @@
+## 2026-05-01 - Simplified Analytic ODE Solution and Loop Hoisting
+**Learning:** Algebraically simplifying the analytic solution to the cell density ODE and hoisting invariant exponentiations (like clone-level parameters) out of the observation loop significantly reduces the number of transcendental function calls. Modern Stan versions require explicit array syntax, and using expm1() improves numerical stability for small time values.
+**Action:** Always look for opportunities to pre-calculate coefficients at the group level (clones) before entering observation loops. Use modern array syntax (array[N] type var) for compatibility with CmdStan 2.33+.
