@@ -1,0 +1,3 @@
+## 2026-05-02 - Stan Model Optimization Learnings
+**Learning:** Variables declared in the 'transformed parameters' block of a Stan model are automatically in scope for the 'generated quantities' block; re-declaring them causes parser errors. Also, modern CmdStan (2.33+) requires the 'array[N] type var' syntax instead of legacy 'type var[N]'.
+**Action:** Always check for existing variable declarations when hoisting parameters to ensure they aren't shadowed or re-declared in downstream blocks. Use a migration script or regex for array syntax updates to avoid breaking modular #include directives.

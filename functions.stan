@@ -29,7 +29,21 @@ real Qct(real t, real R0, real sm, real kq, real td, real kd){
 
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  if (t < td) {
+    // R0 * exp(sm * t) + kq * R0 / sm * (exp(sm * t) - 1)
+    // = R0 * (exp(sm * t) + kq/sm * exp(sm * t) - kq/sm)
+    // = R0/sm * (sm * exp(sm * t) + kq * exp(sm * t) - kq)
+    // = R0/sm * ((sm + kq) * exp(sm * t) - kq)
+    // = R0/sm * (mu * exp(sm * t) - (mu - sm))
+    // = R0/sm * (mu * (exp(sm * t) - 1) + sm)
+    // = R0/sm * (mu * expm1(sm * t) + sm)
+    return R0 / sm * (mu * expm1(sm * t) + sm);
+  } else {
+    // Simplified expression for t >= td
+    return R0 * (mu / sm * exp(sm * t)
+                 - (kq * kd) / (sm * (sm + kd)) * exp(sm * (t - td))
+                 - kq / (sm + kd) * exp(-kd * (t - td)));
+  }
 }
 
 /* 
