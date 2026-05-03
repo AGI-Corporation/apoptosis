@@ -4,32 +4,35 @@
 
 */
 
-// U = 0 if t < tau else 1
-        // R   = Ro*np.exp(sigmu*t)
-        // Qa  = kq*Ro/sigmu*(np.exp(sigmu*t)-1) - kq*Ro/sigmu*(np.exp(sigmu*(t-tau))-1) * U
-        // Qc  = ( kq*Ro/(sigmu+kd)*(np.exp((sigmu+kd)*(t-tau))*np.exp(kd*tau) - np.exp(kd*tau))*np.exp(-kd*t) ) * U
-
-real Rt(real t, real R0, real sm){
-  return R0 * exp(sm * t);
-}
-
-real Qat(real t, real R0, real sm, real kq, real td){
-  real U = t < td ? 0 : 1;
-  return kq * R0 / sm * (exp(sm * t) - 1)
-    - kq * R0 / sm * (exp(sm * (t - td)) - 1) * U;
-}
-
-real Qct(real t, real R0, real sm, real kq, real td, real kd){
-  real U = t < td ? 0 : 1;
-  return U
-    * kq * R0 / (sm + kd)
-    * (exp((sm + kd) * (t - td)) * exp(kd * td) - exp(kd * td))
-    * exp(-kd * t);
-}
-
+/**
+ * Analytically solve the ODE system for total cell density.
+ *
+ * The system is:
+ * dR/dt = (mu - kq) * R
+ * dQa/dt = kq * R - U(t-td) * kq * R(t-td)
+ * dQc/dt = U(t-td) * kq * R(t-td) - kd * Qc
+ *
+ * y(t) = R(t) + Qa(t) + Qc(t)
+ *
+ * Optimized to reduce exp() calls and redundant arithmetic.
+ */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  real val;
+
+  if (t < td) {
+    // y(t) = R0 * (exp(sm*t) + (kq/sm) * (exp(sm*t) - 1))
+    //      = (R0 / sm) * (mu * exp(sm*t) - kq)
+    val = (R0 / sm) * (mu * exp(sm * t) - kq);
+  } else {
+    // y(t) = R0 * [ (mu/sm)*exp(sm*t) - (kq*kd/(sm*(sm+kd)))*exp(sm*(t-td)) - (kq/(sm+kd))*exp(-kd*(t-td)) ]
+    real sm_plus_kd = sm + kd;
+    val = R0 * ( (mu / sm) * exp(sm * t) -
+                 (kq * kd / (sm * sm_plus_kd)) * exp(sm * (t - td)) -
+                 (kq / sm_plus_kd) * exp(-kd * (t - td)) );
+  }
+
+  return val > 1e-9 ? val : 1e-9;
 }
 
 /* 
@@ -42,7 +45,7 @@ real yt(real t, real R0, real mu, real kq, real td, real kd){
 vector dsdt(real t, vector y, real R0, real sm, real kq, real td, real kd){
   vector[4] flux = [(sm + kq) * y[1],
                     kq * y[1],
-                    t < td ? 0 : kq * Rt(t - td, R0, sm),
+                    t < td ? 0 : kq * R0 * exp(sm * (t - td)),
                     kd * y[3]]';
   return [flux[1]-flux[2], flux[2]-flux[3], flux[3]-flux[4]]';
 }
