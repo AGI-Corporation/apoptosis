@@ -57,6 +57,7 @@ def compare(elpd_data_dict):
     loo : Compute the Pareto Smoothed importance sampling Leave One Out cross-validation.
     waic : Compute the widely applicable information criterion.
     """
+
     def w_fuller(weights):
         return np.concatenate((weights, [max(1.0 - np.sum(weights), 0.0)]))
 
@@ -72,12 +73,13 @@ def compare(elpd_data_dict):
         grad = np.zeros(km1)
         for k in range(km1):
             for i in range(rows):
-                grad[k] += (exp_ic_i[i, k] - exp_ic_i[i, km1]) / np.dot(exp_ic_i[i], w_full)
+                grad[k] += (exp_ic_i[i, k] - exp_ic_i[i, km1]) / np.dot(
+                    exp_ic_i[i], w_full
+                )
         return -grad
 
     ic = "loo"
     names = list(elpd_data_dict.keys())
-    scale = "log"
     scale_value = 1
     ascending = False
     df_comp = pd.DataFrame(
