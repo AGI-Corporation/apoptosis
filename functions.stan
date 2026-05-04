@@ -27,9 +27,29 @@ real Qct(real t, real R0, real sm, real kq, real td, real kd){
     * exp(-kd * t);
 }
 
+/**
+ * Algebraically simplified analytic solution for cell density.
+ * Reduces the number of exp() calls from up to 6 down to 3,
+ * and uses expm1() for better numerical stability when t < td.
+ */
 real yt(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
-  return Rt(t, R0, sm) + Qat(t, R0, sm, kq, td) + Qct(t, R0, sm, kq, td, kd);
+  if (t < td) {
+    // simplified from R(t) + Qa(t)
+    // R0 * exp(sm*t) + kq*R0/sm * (exp(sm*t) - 1)
+    // = R0/sm * (sm*exp(sm*t) + kq*exp(sm*t) - kq)
+    // = R0/sm * (mu*exp(sm*t) - kq)
+    // = R0/sm * (mu*(exp(sm*t)-1) + mu - kq)
+    // = R0/sm * (mu*expm1(sm*t) + sm)
+    return (R0 / sm) * (mu * expm1(sm * t) + sm);
+  } else {
+    // simplified from R(t) + Qa(t) + Qc(t)
+    // = R0 * mu/sm * exp(sm*t) - (kq*kd*R0)/(sm*(sm+kd)) * exp(sm*(t-td)) - (kq*R0)/(sm+kd) * exp(-kd*(t-td))
+    real sm_kd = sm + kd;
+    return R0 * ( (mu / sm) * exp(sm * t)
+                - (kq * kd / (sm * sm_kd)) * exp(sm * (t - td))
+                - (kq / sm_kd) * exp(-kd * (t - td)) );
+  }
 }
 
 /* 
@@ -49,5 +69,5 @@ vector dsdt(real t, vector y, real R0, real sm, real kq, real td, real kd){
 real yt_num(real t, real R0, real mu, real kq, real td, real kd){
   real sm = mu - kq;
   real out = sum(ode_rk45(dsdt, [R0, 0, 0]', 0, {t}, R0, sm, kq, td, kd)[1]);
-  return out > 0 ? out : 0.00001;
+  return out > 0 ? out : 1e-9;
 }
