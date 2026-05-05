@@ -29,7 +29,7 @@ def stan_factorize(s_in, first=None):
     codes = range(1, len(values) + 1)
     if first is not None:
         if first not in values:
-            raise ValueError(f"{fist} is not one of the values.")
+            raise ValueError(f"{first} is not one of the values.")
         values = [first] + [v for v in values if v != first]
     return s_in.map(dict(zip(values, codes)))
 
