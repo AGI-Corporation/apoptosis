@@ -1,0 +1,3 @@
+## 2026-05-07 - Stan Model Optimization
+**Learning:** Hoisting invariant parameter exponentiations (e.g., `exp(log_kq)`) out of the observation loop into local blocks in Stan's `transformed parameters` and `generated quantities` blocks provides significant speedups by reducing both computation and output storage overhead. Algebraic simplification of analytic ODE solutions, including the use of `expm1()`, further improves both speed and numerical stability.
+**Action:** Always identify clone-level or design-level parameters that can be pre-calculated once before entering large observation-level loops in Stan models. Use local blocks `{}` to keep these temporary pre-calculated vectors from being saved to the output.
