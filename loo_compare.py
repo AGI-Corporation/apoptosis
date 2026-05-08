@@ -77,7 +77,6 @@ def compare(elpd_data_dict):
 
     ic = "loo"
     names = list(elpd_data_dict.keys())
-    scale = "log"
     scale_value = 1
     ascending = False
     df_comp = pd.DataFrame(
