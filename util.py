@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import norm, lognorm
+from scipy.stats import norm
 
 
 def get_lognormal_params_from_qs(x1, x2, p1, p2):
