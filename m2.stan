@@ -7,12 +7,12 @@ data {
   int<lower=1> D;                     // number of designs
   int<lower=1> C;                     // number of clones
   int<lower=1> R;                     // number of replicates (i.e. n total cultures)
-  int<lower=1,upper=D> design[C];      // map of clone to design
-  int<lower=1,upper=C> clone[R];      // map of replicate to clone
-  int<lower=1,upper=R> replicate[N];  // map of observation to replicate
+  array[C] int<lower=1,upper=D> design;      // map of clone to design
+  array[R] int<lower=1,upper=C> clone;      // map of replicate to clone
+  array[N] int<lower=1,upper=R> replicate;  // map of observation to replicate
   vector<lower=0>[N] t;
   vector<lower=0>[N] y;
-  int<lower=1,upper=R> replicate_test[N_test];
+  array[N_test] int<lower=1,upper=R> replicate_test;
   vector<lower=0>[N_test] t_test;
   vector<lower=0>[N_test] y_test;
   vector[2] prior_mu;
@@ -48,11 +48,23 @@ transformed parameters {
   vector[C] log_td = tconst + dt[design] + cd;
   vector[C] log_kd = dconst + dd[design] + ct;
   {
+    vector[C] kq_vec = exp(log_kq);
+    vector[C] td_vec = exp(log_td);
+    vector[C] kd_vec = exp(log_kd);
+    vector[C] sm = mu - kq_vec;
+    vector[C] mu_over_sm = mu ./ sm;
+    vector[C] f_temp = (kq_vec .* kd_vec) ./ (sm .* (sm + kd_vec));
+    vector[C] A = mu_over_sm - f_temp .* exp(-sm .* td_vec);
+    vector[C] B = (kq_vec ./ (sm + kd_vec)) .* exp(kd_vec .* td_vec);
     vector[N] x_small;
     for (n in 1:N){
         int r = replicate[n];
         int c = clone[r];
-        yhat[n] = yt(t[n], R0[r], mu, exp(log_kq[c]), exp(log_td[c]), exp(log_kd[c]));
+        if (t[n] < td_vec[c]) {
+            yhat[n] = fmax(R0[r] * (mu_over_sm[c] * expm1(sm[c] * t[n]) + 1.0), 1e-9);
+        } else {
+            yhat[n] = fmax(R0[r] * (A[c] * exp(sm[c] * t[n]) - B[c] * exp(-kd_vec[c] * t[n])), 1e-9);
+        }
         x_small[n] = yhat[n] > 0.3 ? 0 : log(yhat[n] / 0.3);
     }
     err = exp(mu_err + b_err * x_small);
@@ -87,14 +99,28 @@ generated quantities {
   vector[D] avg_delay = exp(tconst + dt) + inv(exp(dconst + dd));
   vector[D] tauD = exp(tconst + dt);
   vector[D] k_d = exp(dconst + dd);
-  for (n in 1:N_test){
-    int r = replicate_test[n];
-    int c = clone[r];
-    real yhat_test =
-      yt(t_test[n], R0[r], mu, exp(log_kq[c]), exp(log_td[c]), exp(log_kd[c]));
-    real xs = yhat_test > 0.3 ? 0 : log(yhat_test / 0.3);
-    real err_test = exp(mu_err + b_err * xs);
-    yrep[n] = lognormal_rng(log(yhat_test), err_test);
-    llik[r] += lognormal_lpdf(y_test[n] | log(yhat_test), err_test);
+  {
+    vector[C] kq_vec = exp(log_kq);
+    vector[C] td_vec = exp(log_td);
+    vector[C] kd_vec = exp(log_kd);
+    vector[C] sm = mu - kq_vec;
+    vector[C] mu_over_sm = mu ./ sm;
+    vector[C] f_temp = (kq_vec .* kd_vec) ./ (sm .* (sm + kd_vec));
+    vector[C] A = mu_over_sm - f_temp .* exp(-sm .* td_vec);
+    vector[C] B = (kq_vec ./ (sm + kd_vec)) .* exp(kd_vec .* td_vec);
+    for (n in 1:N_test){
+      int r = replicate_test[n];
+      int c = clone[r];
+      real yhat_test;
+      if (t_test[n] < td_vec[c]) {
+          yhat_test = fmax(R0[r] * (mu_over_sm[c] * expm1(sm[c] * t_test[n]) + 1.0), 1e-9);
+      } else {
+          yhat_test = fmax(R0[r] * (A[c] * exp(sm[c] * t_test[n]) - B[c] * exp(-kd_vec[c] * t_test[n])), 1e-9);
+      }
+      real xs = yhat_test > 0.3 ? 0 : log(yhat_test / 0.3);
+      real err_test = exp(mu_err + b_err * xs);
+      yrep[n] = lognormal_rng(log(yhat_test), err_test);
+      llik[r] += lognormal_lpdf(y_test[n] | log(yhat_test), err_test);
+    }
   }
 }
