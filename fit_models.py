@@ -2,8 +2,8 @@ import os
 
 import arviz as az
 import pandas as pd
-from cmdstanpy import CmdStanModel
-from cmdstanpy.utils import get_logger, jsondump
+from cmdstanpy import CmdStanModel, write_stan_json
+from cmdstanpy.utils import get_logger
 
 from munging import prepare_data
 from util import get_99_pct_params_ln
@@ -68,24 +68,24 @@ STAN_FILES = {
 
 def get_stan_input(msmts, priors, design_col):
     out = {
-        **priors,
+        **{k: list(v) for k, v in priors.items()},
         **{
             "N": int(len(msmts)),
             "N_test": int(len(msmts)),
             "R": int(msmts["replicate"].nunique()),
             "C": int(msmts["clone"].nunique()),
-            "clone": msmts.groupby("replicate_fct")["clone_fct"].first().values,
-            "replicate": msmts["replicate_fct"].values,
-            "t": msmts["day"].values,
-            "y": msmts["y"].values,
-            "replicate_test": msmts["replicate_fct"].values,
-            "t_test": msmts["day"].values,
-            "y_test": msmts["y"].values,
+            "clone": list(msmts.groupby("replicate_fct")["clone_fct"].first().values),
+            "replicate": list(msmts["replicate_fct"].values),
+            "t": list(msmts["day"].values),
+            "y": list(msmts["y"].values),
+            "replicate_test": list(msmts["replicate_fct"].values),
+            "t_test": list(msmts["day"].values),
+            "y_test": list(msmts["y"].values),
             "likelihood": int(LIKELIHOOD),
         },
     }
     if "null" not in design_col:
-        out["design"] = msmts.groupby("clone_fct")[design_col + "_fct"].first().values
+        out["design"] = list(msmts.groupby("clone_fct")[design_col + "_fct"].first().values)
         out["D"] = int(msmts[design_col + "_fct"].max())
     return out
 
@@ -136,7 +136,7 @@ def main():
             model = CmdStanModel(stan_file=stan_file, logger=logger)
             msmts = prepare_data(pd.read_csv(CSV_FILE), treatment=treatment)
             stan_input = get_stan_input(msmts, PRIORS, design_col)
-            jsondump(json_file, stan_input)
+            write_stan_json(json_file, stan_input)
             mcmc = model.sample(data=stan_input, **SAMPLE_CONFIG)
             print(mcmc.diagnose().replace("\n\n", "\n"))
             infd_kwargs = get_infd_kwargs(msmts, design_col, stan_input)
